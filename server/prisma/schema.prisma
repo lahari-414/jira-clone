@@ -1,0 +1,275 @@
+// Prisma schema for the project-management application
+// Run `npx prisma migrate dev` inside /server after configuring DATABASE_URL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PROJECT_MANAGER
+  DEVELOPER
+  TESTER
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectMemberRole {
+  OWNER
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+enum IssueType {
+  TASK
+  BUG
+  STORY
+  EPIC
+  IMPROVEMENT
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum IssueStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  ASSIGNED
+  STATUS_CHANGED
+  MENTIONED
+  COMMENTED
+  SPRINT_STARTED
+  SPRINT_COMPLETED
+  PROJECT_COMPLETED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  avatar       String?
+  role         UserRole @default(DEVELOPER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedProjects    Project[]        @relation("ProjectOwner")
+  projectMembers   ProjectMember[]
+  reportedIssues   Issue[]          @relation("IssueReporter")
+  assignedIssues   Issue[]          @relation("IssueAssignee")
+  comments         Comment[]
+  attachments      Attachment[]
+  notifications    Notification[]
+  activities       Activity[]
+  savedFilters     SavedFilter[]
+
+  @@index([email])
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  key         String        @unique
+  description String?
+  ownerId     String
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members ProjectMember[]
+  issues  Issue[]
+  labels  Label[]
+  sprints Sprint[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model ProjectMember {
+  id          String            @id @default(uuid())
+  projectId   String
+  userId      String
+  projectRole ProjectMemberRole @default(MEMBER)
+  createdAt   DateTime          @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Issue {
+  id          String        @id @default(uuid())
+  issueNumber Int
+  projectId   String
+  title       String
+  description String?
+  issueType   IssueType     @default(TASK)
+  status      IssueStatus   @default(BACKLOG)
+  priority    IssuePriority @default(MEDIUM)
+  reporterId  String
+  assigneeId  String?
+  sprintId    String?
+  dueDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporter    User         @relation("IssueReporter", fields: [reporterId], references: [id])
+  assignee    User?        @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  sprint      Sprint?      @relation(fields: [sprintId], references: [id])
+  labels      IssueLabel[]
+  comments    Comment[]
+  attachments Attachment[]
+  activities  Activity[]
+  notifications Notification[]
+
+  @@unique([projectId, issueNumber])
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([sprintId])
+  @@index([status])
+}
+
+model Label {
+  id        String @id @default(uuid())
+  name      String
+  projectId String
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues  IssueLabel[]
+
+  @@unique([projectId, name])
+}
+
+model IssueLabel {
+  id      String @id @default(uuid())
+  issueId String
+  labelId String
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, labelId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  issueId   String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issue  Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@index([issueId])
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  issueId      String
+  uploadedById String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  createdAt    DateTime @default(now())
+
+  issue      Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  uploadedBy User  @relation(fields: [uploadedById], references: [id])
+
+  @@index([issueId])
+}
+
+model Sprint {
+  id        String       @id @default(uuid())
+  projectId String
+  name      String
+  goal      String?
+  startDate DateTime?
+  endDate   DateTime?
+  status    SprintStatus @default(PLANNED)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+
+  @@index([projectId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  issueId   String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  issue Issue? @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  issueId   String
+  userId    String
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([issueId])
+}
+
+model SavedFilter {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  query     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

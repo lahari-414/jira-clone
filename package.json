@@ -1,0 +1,13 @@
+{
+  "name": "project-management-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo for the Atlas project management / issue tracking application",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "prisma:migrate": "npm run prisma:migrate --prefix server",
+    "seed": "npm run seed --prefix server"
+  }
+}
