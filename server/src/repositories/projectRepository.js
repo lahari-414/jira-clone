@@ -15,7 +15,7 @@ const projectRepository = {
   findByKey: (key) => prisma.project.findUnique({ where: { key } }),
   findMany: (params) => prisma.project.findMany(params),
   findManyForUser: (userId, role) => {
-    if (role === 'ADMIN') return prisma.project.findMany({ orderBy: { createdAt: 'desc' } });
+    if (role === 'ADMIN' || role === 'HR') return prisma.project.findMany({ orderBy: { createdAt: 'desc' } });
     return prisma.project.findMany({
       where: { members: { some: { userId } } },
       orderBy: { createdAt: 'desc' },

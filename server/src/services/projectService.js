@@ -36,7 +36,7 @@ const projectService = {
   async archive(id) {
     const project = await this.getById(id);
     const archived = await projectRepository.archive(id);
-    const admins = await userRepository.findMany({ where: { role: 'ADMIN', isActive: true }, select: { id: true } });
+    const admins = await userRepository.findMany({ where: { role: { in: ['ADMIN', 'HR'] }, isActive: true }, select: { id: true } });
     const recipients = new Set([project.ownerId, ...project.members.map((member) => member.userId), ...admins.map((admin) => admin.id)]);
     await Promise.all([...recipients].map((userId) => notificationService.notify({
       userId,
@@ -58,7 +58,20 @@ const projectService = {
   },
 
   async removeMember(projectId, userId) {
-    return projectRepository.removeMember(projectId, userId);
+    const [project, membership] = await Promise.all([
+      projectRepository.findById(projectId),
+      projectRepository.findMembership(projectId, userId),
+    ]);
+    if (!project) throw ApiError.notFound('Project not found');
+    if (!membership) throw ApiError.notFound('Project member not found');
+    const removed = await projectRepository.removeMember(projectId, userId);
+    await notificationService.notify({
+      userId,
+      type: 'PROJECT_REMOVED',
+      title: 'Removed from project',
+      message: `You were removed from ${project.name} (${project.key}). You no longer have access to this project.`,
+    });
+    return removed;
   },
 
   async updateMember(projectId, userId, projectRole) {

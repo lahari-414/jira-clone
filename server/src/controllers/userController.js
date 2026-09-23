@@ -28,6 +28,11 @@ exports.setStatus = asyncHandler(async (req, res) => {
 });
 
 exports.remove = asyncHandler(async (req, res) => {
-  await userService.setStatus(req.params.id, false);
-  success(res, { message: 'User deactivated' });
+  await userService.setDeleted(req.params.id, true);
+  success(res, { message: 'User moved to deleted users' });
+});
+
+exports.restore = asyncHandler(async (req, res) => {
+  const user = await userService.setDeleted(req.params.id, false);
+  success(res, { user, message: 'User restored' });
 });

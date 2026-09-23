@@ -8,7 +8,7 @@ const searchService = {
     const where = { AND: [] };
 
     // Restrict to projects the user can see, unless they're an admin
-    if (user.role !== 'ADMIN') {
+    if (!['ADMIN', 'HR'].includes(user.role)) {
       where.AND.push({ project: { members: { some: { userId: user.id } } } });
     }
     if (projectId) where.AND.push({ projectId });

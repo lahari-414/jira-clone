@@ -13,7 +13,7 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.update = asyncHandler(async (req, res) => {
-  const comment = await commentService.update(req.params.id, req.user.id, req.body.content);
+  const comment = await commentService.update(req.params.id, req.user, req.body.content);
   success(res, { comment });
 });
 

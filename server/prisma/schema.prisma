@@ -12,6 +12,7 @@ datasource db {
 
 enum UserRole {
   ADMIN
+  HR
   PROJECT_MANAGER
   DEVELOPER
   TESTER
@@ -71,6 +72,7 @@ enum NotificationType {
   SPRINT_STARTED
   SPRINT_COMPLETED
   PROJECT_COMPLETED
+  PROJECT_REMOVED
   ISSUE_CREATED
   REASSIGNED
   PRIORITY_CHANGED
@@ -85,6 +87,7 @@ model User {
   avatar       String?
   role         UserRole @default(DEVELOPER)
   isActive     Boolean  @default(true)
+  isDeleted    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

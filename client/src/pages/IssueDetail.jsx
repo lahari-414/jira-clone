@@ -143,7 +143,7 @@ export default function IssueDetail() {
               <span style={{ fontSize: 16 }}>📎</span>
               <a href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${attachment.fileUrl}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, flex: 1 }}>{attachment.fileName}</a>
               <span className="text-muted" style={{ fontSize: 11.5 }}>{Math.ceil(attachment.fileSize / 1024)} KB · {attachment.uploadedBy.name}</span>
-              {(attachment.uploadedById === user.id || user.role === 'ADMIN') && <Button size="sm" variant="ghost" onClick={async () => { try { await issueApi.removeAttachment(id, attachment.id); reloadAttachments(); } catch { toast.error('Could not delete attachment'); } }}>Delete</Button>}
+              {(attachment.uploadedById === user.id || ['ADMIN', 'HR'].includes(user.role)) && <Button size="sm" variant="ghost" onClick={async () => { try { await issueApi.removeAttachment(id, attachment.id); reloadAttachments(); } catch { toast.error('Could not delete attachment'); } }}>Delete</Button>}
             </div>
           ))}
         </div>
@@ -158,7 +158,7 @@ export default function IssueDetail() {
                 {editingCommentId === c.id ? (
                   <><Textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} /><div className="flex-row" style={{ marginTop: 5 }}><Button size="sm" onClick={() => saveComment(c.id)}>Save</Button><Button size="sm" variant="ghost" onClick={() => setEditingCommentId(null)}>Cancel</Button></div></>
                 ) : (
-                  <><p style={{ margin: '2px 0 0', fontSize: 13 }}>{c.content}</p>{(c.authorId === user.id || user.role === 'ADMIN') && <div className="flex-row" style={{ marginTop: 4 }}><button className="btn btn-ghost btn-sm" onClick={() => { setEditingCommentId(c.id); setCommentDraft(c.content); }}>Edit</button><button className="btn btn-ghost btn-sm" onClick={async () => { try { await issueApi.removeComment(c.id); reloadComments(); } catch { toast.error('Could not delete comment'); } }}>Delete</button></div>}</>
+                  <><p style={{ margin: '2px 0 0', fontSize: 13 }}>{c.content}</p>{(c.authorId === user.id || ['ADMIN', 'HR'].includes(user.role)) && <div className="flex-row" style={{ marginTop: 4 }}><button className="btn btn-ghost btn-sm" onClick={() => { setEditingCommentId(c.id); setCommentDraft(c.content); }}>Edit</button><button className="btn btn-ghost btn-sm" onClick={async () => { try { await issueApi.removeComment(c.id); reloadComments(); } catch { toast.error('Could not delete comment'); } }}>Delete</button></div>}</>
                 )}
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function IssueDetail() {
           </div>
         </div>
 
-        <div className="card card-pad">
+        <div className="card card-pad" id="activity">
           <h3 style={{ fontSize: 13, marginBottom: 12 }}>Activity</h3>
           {(!activity || activity.length === 0) && <p className="text-muted" style={{ margin: 0, fontSize: 13 }}>No activity yet.</p>}
           {activity?.map((a) => (
@@ -217,7 +217,7 @@ export default function IssueDetail() {
         </div>
         <div className="field"><label>Assigned by</label><div style={{ fontSize: 13 }}>{issue.assignedBy?.name || '—'}</div></div>
         <div className="field"><label>Completed by</label><div style={{ fontSize: 13 }}>{issue.completedBy?.name || '—'}</div></div>
-        <div className="field"><label>Sprint(s)</label><div style={{ fontSize: 13 }}>{issue.sprints?.map((s) => s.name).join(', ') || '—'}</div></div>
+        <div className="field"><label>Sprint(s)</label><div className="sprint-date-list">{issue.sprints?.length ? issue.sprints.map((s) => <div key={s.id}><strong>{s.name}</strong><span className="text-muted">{formatDate(s.startDate)} – {formatDate(s.endDate)}</span></div>) : '—'}</div></div>
         <div className="divider" />
         <div className="field"><label>Lifecycle timestamps</label><div className="timestamp-list"><span>Created: {formatDateTime(issue.createdAt)}</span><span>Assigned: {formatDateTime(issue.assignedAt)}</span><span>Started: {formatDateTime(issue.startedAt)}</span><span>Status changed: {formatDateTime(issue.statusChangedAt)}</span><span>Completed: {formatDateTime(issue.completedAt)}</span><span>Updated: {formatDateTime(issue.updatedAt)}</span></div></div>
         <div className="field">

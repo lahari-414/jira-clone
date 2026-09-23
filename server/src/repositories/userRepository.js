@@ -8,6 +8,7 @@ const userRepository = {
   count: (where) => prisma.user.count({ where }),
   update: (id, data) => prisma.user.update({ where: { id }, data }),
   setActive: (id, isActive) => prisma.user.update({ where: { id }, data: { isActive } }),
+  setDeleted: (id, isDeleted) => prisma.user.update({ where: { id }, data: { isDeleted } }),
 };
 
 module.exports = userRepository;

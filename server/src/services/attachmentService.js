@@ -15,7 +15,7 @@ module.exports = {
   async remove(id, user) {
     const attachment = await attachmentRepository.findById(id);
     if (!attachment) throw ApiError.notFound('Attachment not found');
-    if (attachment.uploadedById !== user.id && user.role !== 'ADMIN') throw ApiError.forbidden('You can only delete your own attachments');
+    if (attachment.uploadedById !== user.id && !['ADMIN', 'HR'].includes(user.role)) throw ApiError.forbidden('You can only delete your own attachments');
     await attachmentRepository.remove(id);
     await fs.unlink(path.join(process.cwd(), attachment.fileUrl)).catch(() => {});
   },

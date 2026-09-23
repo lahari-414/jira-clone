@@ -13,7 +13,7 @@ const authenticate = async (req, res, next) => {
     const payload = verifyToken(token);
 
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || user.isDeleted) {
       throw ApiError.unauthorized('Account is inactive or does not exist');
     }
     req.user = user;

@@ -70,7 +70,7 @@ export default function Search() {
                   <td>{issue.assignee?.name || 'Unassigned'}</td>
                   <td>{issue.reporter?.name || '—'}</td>
                   <td>{issue.assignedBy?.name || '—'}</td>
-                  <td>{issue.sprints?.map((s) => s.name).join(', ') || '—'}</td>
+                  <td>{(issue.sprints || issue.sprintLinks?.map(({ sprint }) => sprint) || []).map((s) => s.name).join(', ') || '—'}</td>
                 </tr>
               ))}
             </tbody>

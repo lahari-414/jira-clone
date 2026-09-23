@@ -285,6 +285,12 @@ Response shape is always one of:
 
 ## 16. Troubleshooting
 
+### Email lifecycle notifications
+
+The server sends issue lifecycle email through SMTP and stores each recipient attempt in `EmailNotification`. To enable delivery, set `SMTP_URL` in `server/.env` to the SMTP provider connection URL and set `MAIL_FROM` to a sender address authorized by that provider. The example file includes placeholders; use credentials from your mail provider and restart the API after changing them. Keep SMTP credentials out of source control. When SMTP is not configured, records are saved with `QUEUED` status and no message is delivered; configuring SMTP does not retroactively send queued messages. Successful sends are recorded as `SENT` with `sentAt`, while failures are recorded as `FAILED` with an error. Recipients are looked up from registered issue users and project owners/managers; addresses are not hard-coded.
+
+The current event templates cover issue creation/assignment/reassignment, start, blocked/on-hold/completed status, priority, sprint, and important detail changes. You can inspect records directly in the database `EmailNotification` table. For production, use a verified sender/domain and an authenticated SMTP URL from your mail provider.
+
 | Symptom | Likely cause |
 |---|---|
 | `Missing required environment variable: DATABASE_URL` on server start | `server/.env` wasn't created from `.env.example`, or the DB isn't reachable |

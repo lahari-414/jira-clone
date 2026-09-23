@@ -3,7 +3,7 @@ const prisma = require('../config/db');
 const dashboardService = {
   async getSummary(user) {
     const projectFilter =
-      user.role === 'ADMIN' ? {} : { project: { members: { some: { userId: user.id } } } };
+      ['ADMIN', 'HR'].includes(user.role) ? {} : { project: { members: { some: { userId: user.id } } } };
 
     const [
       totalProjects,
@@ -19,7 +19,7 @@ const dashboardService = {
       recentComments,
     ] = await Promise.all([
       prisma.project.count(
-        user.role === 'ADMIN' ? {} : { where: { members: { some: { userId: user.id } } } }
+        ['ADMIN', 'HR'].includes(user.role) ? {} : { where: { members: { some: { userId: user.id } } } }
       ),
       prisma.issue.count({ where: { ...projectFilter, status: { not: 'DONE' } } }),
       prisma.issue.count({ where: { ...projectFilter, status: 'DONE' } }),
@@ -34,17 +34,17 @@ const dashboardService = {
       prisma.issue.groupBy({ by: ['priority'], where: projectFilter, _count: true }),
       prisma.issue.groupBy({ by: ['issueType'], where: projectFilter, _count: true }),
       prisma.sprint.findMany({
-        where: { status: 'ACTIVE', ...(user.role === 'ADMIN' ? {} : { project: { members: { some: { userId: user.id } } } }) },
+        where: { status: 'ACTIVE', ...(['ADMIN', 'HR'].includes(user.role) ? {} : { project: { members: { some: { userId: user.id } } } }) },
         include: { project: true, _count: { select: { issueLinks: true } } },
       }),
       prisma.activity.findMany({
-        where: user.role === 'ADMIN' ? {} : { issue: projectFilter },
+        where: ['ADMIN', 'HR'].includes(user.role) ? {} : { issue: projectFilter },
         include: { user: true, issue: { include: { project: true } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
       }),
       prisma.comment.findMany({
-        where: user.role === 'ADMIN' ? {} : { issue: projectFilter },
+        where: ['ADMIN', 'HR'].includes(user.role) ? {} : { issue: projectFilter },
         include: { author: true, issue: { include: { project: true } } },
         orderBy: { createdAt: 'desc' },
         take: 8,

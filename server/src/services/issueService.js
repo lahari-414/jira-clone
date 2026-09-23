@@ -31,7 +31,11 @@ const issueService = {
     });
     await activityService.log({ issueId: issue.id, userId: reporterId, action: 'ISSUE_CREATED', newValue: status });
     if (issue.assigneeId) await activityService.log({ issueId: issue.id, userId: reporterId, action: 'ISSUE_ASSIGNED', newValue: issue.assignee.name });
-    notifyIssue(issue, 'Work Created', [issue.assignee, issue.reporter]);
+    notifyIssue(issue, 'Work Created', [issue.reporter]);
+    if (issue.assignee) {
+      await notificationService.notify({ userId: issue.assigneeId, type: 'ASSIGNED', title: 'Work assigned to you', message: `${withKey(issue).key}: ${issue.title}`, issueId: issue.id });
+      notifyIssue(issue, 'Work Assigned', [issue.assignee]);
+    }
     return withKey(issue);
   },
   async getById(id) { const issue = await issueRepository.findById(id); if (!issue) throw ApiError.notFound('Issue not found'); return withKey(issue); },
@@ -48,6 +52,8 @@ const issueService = {
     if (data.dueDate !== undefined) allowed.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.sprintIds !== undefined) { const ids = await validateSprints(before.projectId, data.sprintIds); allowed.sprintId = ids[0] || null; allowed.sprintLinks = { deleteMany: {}, create: ids.map((sprintId) => ({ sprintId })) }; }
     const issue = await issueRepository.update(id, allowed); await activityService.log({ issueId: id, userId, action: 'ISSUE_UPDATED' });
+    const otherImportantFieldsChanged = ['title', 'description', 'issueType'].some((field) => data[field] !== undefined && data[field] !== before[field]);
+    if (otherImportantFieldsChanged) notifyIssue(issue, 'Issue Updated', [issue.assignee, issue.reporter, issue.assignedBy]);
     if (data.priority !== undefined && data.priority !== before.priority) { await activityService.log({ issueId: id, userId, action: 'PRIORITY_CHANGED', oldValue: before.priority, newValue: data.priority }); notifyIssue(issue, 'Priority Changed', [issue.assignee, issue.reporter, issue.assignedBy]); }
     if (data.sprintIds !== undefined) { await activityService.log({ issueId: id, userId, action: 'SPRINTS_UPDATED', oldValue: before.sprintLinks.map((x) => x.sprint.name).join(', ') || 'None', newValue: issue.sprintLinks.map((x) => x.sprint.name).join(', ') || 'None' }); notifyIssue(issue, 'Sprint Updated', [issue.assignee, issue.reporter, issue.assignedBy]); }
     return withKey(issue);

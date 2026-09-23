@@ -39,7 +39,7 @@ export default function Notifications() {
           style={{ marginBottom: 8, borderLeft: n.isRead ? undefined : '3px solid var(--accent-500)' }}
           onClick={() => !n.isRead && notificationApi.markRead(n.id).then(reload)}
         >
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{n.title}</div>
+          <div className="flex-row" style={{ justifyContent: 'space-between' }}><div style={{ fontSize: 13, fontWeight: 650 }}>{n.title}</div><span className={`badge ${n.issueId ? 'badge-blue' : 'badge-violet'}`}>{n.issueId ? 'Issue' : 'Project'}</span></div>
           <div style={{ fontSize: 13, color: 'var(--ink-700)', margin: '2px 0' }}>{n.message}</div>
           <div className="flex-row" style={{ justifyContent: 'space-between' }}>
             <span className="text-muted" style={{ fontSize: 11.5 }}>{timeAgo(n.createdAt)}</span>

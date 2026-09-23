@@ -1,20 +1,20 @@
 :root {
   /* Color: cool ink + signal blue, not the default cream/terracotta combo */
-  --ink-950: #10131C;
-  --ink-900: #171B26;
-  --ink-800: #232838;
-  --ink-700: #323952;
-  --ink-500: #6B7280;
-  --ink-300: #A2A8B8;
-  --ink-100: #DBDEE6;
+  --ink-950: #102a56;
+  --ink-900: #17345f;
+  --ink-800: #1c3a70;
+  --ink-700: #415777;
+  --ink-500: #71829a;
+  --ink-300: #a8b5c5;
+  --ink-100: #dce5ef;
 
-  --canvas: #F1F2F6;
+  --canvas: #f4f7fb;
   --surface: #FFFFFF;
-  --border: #E2E4EC;
+  --border: #dce4ee;
 
-  --accent-600: #2D46D6;
-  --accent-500: #3E5AF0;
-  --accent-100: #E7EAFD;
+  --accent-600: #1769e8;
+  --accent-500: #287cf0;
+  --accent-100: #e4f0ff;
 
   --amber-500: #D98A2B;
   --amber-100: #FBEBD4;
@@ -34,12 +34,12 @@
   --font-mono: 'SFMono-Regular', Consolas, monospace;
 
   /* Scale */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
 
-  --shadow-1: 0 1px 2px rgba(16, 19, 28, 0.06);
-  --shadow-2: 0 4px 16px rgba(16, 19, 28, 0.10);
+  --shadow-1: 0 2px 8px rgba(19, 50, 91, 0.06);
+  --shadow-2: 0 12px 34px rgba(19, 50, 91, 0.14);
 }
 
 * { box-sizing: border-box; }

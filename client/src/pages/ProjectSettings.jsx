@@ -26,7 +26,7 @@ export default function ProjectSettings() {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const { data: workspaceUsers } = useApi(() => userApi.list({ limit: 100 }), []);
 
-  const canManage = user.role === 'ADMIN' || members?.find((m) => m.userId === user.id && ['OWNER', 'MANAGER'].includes(m.projectRole));
+  const canManage = ['ADMIN', 'HR'].includes(user.role) || members?.find((m) => m.userId === user.id && ['OWNER', 'MANAGER'].includes(m.projectRole));
 
   const save = async (e) => {
     e.preventDefault();

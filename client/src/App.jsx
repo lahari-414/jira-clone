@@ -57,7 +57,7 @@ export default function App() {
                 <Route path="/my-issues" element={<MyIssues />} />
                 <Route path="/profile" element={<Profile />} />
 
-                <Route element={<ProtectedRoute roles={['ADMIN']} />}>
+                <Route element={<ProtectedRoute roles={['ADMIN', 'HR']} />}>
                   <Route path="/admin" element={<Admin />}>
                     <Route index element={<AdminOverview />} />
                     <Route path="users" element={<AdminUsers />} />

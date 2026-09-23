@@ -28,17 +28,17 @@ const commentService = {
     return comment;
   },
 
-  async update(commentId, userId, content) {
+  async update(commentId, user, content) {
     const comment = await commentRepository.findById(commentId);
     if (!comment) throw ApiError.notFound('Comment not found');
-    if (comment.authorId !== userId) throw ApiError.forbidden('You can only edit your own comments');
+    if (comment.authorId !== user.id && !['ADMIN', 'HR'].includes(user.role)) throw ApiError.forbidden('You can only edit your own comments');
     return commentRepository.update(commentId, content);
   },
 
   async delete(commentId, user) {
     const comment = await commentRepository.findById(commentId);
     if (!comment) throw ApiError.notFound('Comment not found');
-    if (comment.authorId !== user.id && user.role !== 'ADMIN') {
+    if (comment.authorId !== user.id && !['ADMIN', 'HR'].includes(user.role)) {
       throw ApiError.forbidden('You can only delete your own comments');
     }
     return commentRepository.delete(commentId);

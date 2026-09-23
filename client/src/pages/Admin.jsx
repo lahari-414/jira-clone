@@ -11,8 +11,8 @@ export default function Admin() {
     <div>
       <div className="page-header">
         <div>
-          <h1>Admin panel</h1>
-          <div className="page-subtitle">Platform-wide administration.</div>
+          <h1>Admin &amp; HR panel</h1>
+          <div className="page-subtitle">Workspace administration and people management.</div>
         </div>
       </div>
       <div className="tabs">

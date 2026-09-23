@@ -47,6 +47,7 @@ export default function ProjectIssues() {
                 <tr key={issue.id}>
                   <td className="text-muted">{issue.key}</td>
                   <td><Link to={`/issues/${issue.id}`}>{issue.title}</Link></td>
+                  <td>{issue.project?.name || project.name}</td>
                   <td><Badge variant={TYPE_BADGE[issue.issueType]}>{issue.issueType}</Badge></td>
                   <td><Badge variant={STATUS_BADGE[issue.status]}>{STATUS_LABELS[issue.status]}</Badge></td>
                   <td>{issue.priority}</td>
