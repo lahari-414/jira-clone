@@ -43,6 +43,7 @@ enum IssuePriority {
   MEDIUM
   HIGH
   HIGHEST
+  CRITICAL
 }
 
 enum IssueStatus {
@@ -50,6 +51,8 @@ enum IssueStatus {
   TODO
   IN_PROGRESS
   IN_REVIEW
+  BLOCKED
+  ON_HOLD
   DONE
 }
 
@@ -68,6 +71,10 @@ enum NotificationType {
   SPRINT_STARTED
   SPRINT_COMPLETED
   PROJECT_COMPLETED
+  ISSUE_CREATED
+  REASSIGNED
+  PRIORITY_CHANGED
+  SPRINT_UPDATED
 }
 
 model User {
@@ -85,10 +92,13 @@ model User {
   projectMembers   ProjectMember[]
   reportedIssues   Issue[]          @relation("IssueReporter")
   assignedIssues   Issue[]          @relation("IssueAssignee")
+  assignedByIssues Issue[]          @relation("IssueAssignedBy")
+  completedIssues  Issue[]          @relation("IssueCompletedBy")
   comments         Comment[]
   attachments      Attachment[]
   notifications    Notification[]
   activities       Activity[]
+  emailNotifications EmailNotification[]
   savedFilters     SavedFilter[]
 
   @@index([email])
@@ -135,28 +145,40 @@ model Issue {
   title       String
   description String?
   issueType   IssueType     @default(TASK)
-  status      IssueStatus   @default(BACKLOG)
+  status      IssueStatus   @default(TODO)
   priority    IssuePriority @default(MEDIUM)
   reporterId  String
   assigneeId  String?
+  assignedById String?
+  completedById String?
   sprintId    String?
   dueDate     DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  assignedAt  DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  statusChangedAt DateTime?
 
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   reporter    User         @relation("IssueReporter", fields: [reporterId], references: [id])
   assignee    User?        @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  assignedBy  User?        @relation("IssueAssignedBy", fields: [assignedById], references: [id])
+  completedBy User?        @relation("IssueCompletedBy", fields: [completedById], references: [id])
   sprint      Sprint?      @relation(fields: [sprintId], references: [id])
   labels      IssueLabel[]
   comments    Comment[]
   attachments Attachment[]
   activities  Activity[]
   notifications Notification[]
+  sprintLinks IssueSprint[]
+  emailNotifications EmailNotification[]
 
   @@unique([projectId, issueNumber])
   @@index([projectId])
   @@index([assigneeId])
+  @@index([assignedById])
+  @@index([completedById])
   @@index([sprintId])
   @@index([status])
 }
@@ -226,8 +248,21 @@ model Sprint {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   issues  Issue[]
+  issueLinks IssueSprint[]
 
   @@index([projectId])
+}
+
+model IssueSprint {
+  issueId String
+  sprintId String
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  sprint Sprint @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, sprintId])
+  @@index([sprintId])
 }
 
 model Notification {
@@ -259,6 +294,25 @@ model Activity {
   user  User  @relation(fields: [userId], references: [id])
 
   @@index([issueId])
+}
+
+model EmailNotification {
+  id String @id @default(uuid())
+  issueId String
+  userId String?
+  event String
+  recipientEmail String
+  subject String
+  status String @default("PENDING")
+  sentAt DateTime?
+  error String?
+  eventKey String @unique
+  createdAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([issueId, createdAt])
+  @@index([recipientEmail])
 }
 
 model SavedFilter {

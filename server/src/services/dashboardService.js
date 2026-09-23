@@ -23,7 +23,7 @@ const dashboardService = {
       ),
       prisma.issue.count({ where: { ...projectFilter, status: { not: 'DONE' } } }),
       prisma.issue.count({ where: { ...projectFilter, status: 'DONE' } }),
-      prisma.issue.count({ where: { ...projectFilter, priority: { in: ['HIGH', 'HIGHEST'] }, status: { not: 'DONE' } } }),
+      prisma.issue.count({ where: { ...projectFilter, priority: { in: ['HIGH', 'HIGHEST', 'CRITICAL'] }, status: { not: 'DONE' } } }),
       prisma.issue.findMany({
         where: { assigneeId: user.id, status: { not: 'DONE' } },
         include: { project: true },
@@ -35,13 +35,13 @@ const dashboardService = {
       prisma.issue.groupBy({ by: ['issueType'], where: projectFilter, _count: true }),
       prisma.sprint.findMany({
         where: { status: 'ACTIVE', ...(user.role === 'ADMIN' ? {} : { project: { members: { some: { userId: user.id } } } }) },
-        include: { project: true, _count: { select: { issues: true } } },
+        include: { project: true, _count: { select: { issueLinks: true } } },
       }),
       prisma.activity.findMany({
         where: user.role === 'ADMIN' ? {} : { issue: projectFilter },
         include: { user: true, issue: { include: { project: true } } },
         orderBy: { createdAt: 'desc' },
-        take: 15,
+        take: 10,
       }),
       prisma.comment.findMany({
         where: user.role === 'ADMIN' ? {} : { issue: projectFilter },

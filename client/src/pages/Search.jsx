@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { searchApi } from '../api/searchApi';
 import { projectApi } from '../api/projectApi';
 import { useApi } from '../hooks/useApi';
@@ -8,11 +8,14 @@ import Select from '../components/common/Select';
 import Badge from '../components/common/Badge';
 import EmptyState from '../components/common/EmptyState';
 import Spinner from '../components/common/Spinner';
-import { STATUS_LABELS, TYPE_BADGE } from '../utils/format';
+import { STATUS_LABELS, STATUS_BADGE, TYPE_BADGE } from '../utils/format';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Search() {
+  const [params] = useSearchParams(); const { user } = useAuth();
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(params.get('status') || '');
+  const [priority, setPriority] = useState(params.get('priority') || '');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [projectId, setProjectId] = useState('');
@@ -22,14 +25,14 @@ export default function Search() {
     e?.preventDefault();
     setLoading(true);
     try {
-      const issues = await searchApi.issues({ q: q || undefined, status: status || undefined, projectId: projectId || undefined });
+      const issues = await searchApi.issues({ q: q || undefined, status: status || undefined, priority: priority || undefined, projectId: projectId || undefined, assigneeId: params.get('mine') ? user?.id : undefined });
       setResults(issues);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { runSearch(); }, []);
+  useEffect(() => { runSearch(); }, [params, user?.id]);
 
   return (
     <div>
@@ -40,6 +43,7 @@ export default function Search() {
           <option value="">All statuses</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </Select>
+        <Select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ width: 150 }}><option value="">All priorities</option>{['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((value) => <option key={value}>{value}</option>)}</Select>
         <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={{ width: 210 }}>
           <option value="">All projects</option>
           {projects?.map((project) => <option key={project.id} value={project.id}>{project.key} — {project.name}</option>)}
@@ -53,7 +57,7 @@ export default function Search() {
       {!loading && results?.length > 0 && (
         <div className="card">
           <table className="data-table">
-            <thead><tr><th>Key</th><th>Title</th><th>Project</th><th>Type</th><th>Status</th><th>Assignee</th></tr></thead>
+            <thead><tr><th>Key</th><th>Title</th><th>Project</th><th>Type</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Reporter</th><th>Assigned by</th><th>Sprint(s)</th></tr></thead>
             <tbody>
               {results.map((issue) => (
                 <tr key={issue.id}>
@@ -61,8 +65,12 @@ export default function Search() {
                   <td><Link to={`/issues/${issue.id}`}>{issue.title}</Link></td>
                   <td>{issue.project.name}</td>
                   <td><Badge variant={TYPE_BADGE[issue.issueType]}>{issue.issueType}</Badge></td>
-                  <td>{STATUS_LABELS[issue.status]}</td>
+                  <td><Badge variant={STATUS_BADGE[issue.status]}>{STATUS_LABELS[issue.status]}</Badge></td>
+                  <td>{issue.priority}</td>
                   <td>{issue.assignee?.name || 'Unassigned'}</td>
+                  <td>{issue.reporter?.name || '—'}</td>
+                  <td>{issue.assignedBy?.name || '—'}</td>
+                  <td>{issue.sprints?.map((s) => s.name).join(', ') || '—'}</td>
                 </tr>
               ))}
             </tbody>

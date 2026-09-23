@@ -3,8 +3,11 @@ const prisma = require('../config/db');
 const issueInclude = {
   reporter: true,
   assignee: true,
+  assignedBy: true,
+  completedBy: true,
   project: true,
   sprint: true,
+  sprintLinks: { include: { sprint: true }, orderBy: { createdAt: 'asc' } },
   labels: { include: { label: true } },
   _count: { select: { comments: true, attachments: true } },
 };
@@ -39,7 +42,8 @@ const issueRepository = {
     }),
   findBacklogIssues: (projectId) =>
     prisma.issue.findMany({
-      where: { projectId, OR: [{ sprintId: null }, { sprint: { status: 'PLANNED' } }] },
+      // Backlog is a view of unstarted work, never a separate copy of an issue.
+      where: { projectId, status: 'TODO' },
       include: issueInclude,
       orderBy: { createdAt: 'desc' },
     }),

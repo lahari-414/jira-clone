@@ -5,10 +5,13 @@ import Input from '../common/Input';
 import Textarea from '../common/Textarea';
 import Select from '../common/Select';
 import { issueApi } from '../../api/issueApi';
+import { sprintApi } from '../../api/sprintApi';
+import { useApi } from '../../hooks/useApi';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function CreateIssueModal({ projectId, projectKey, members = [], onClose, onCreated }) {
-  const [form, setForm] = useState({ title: '', description: '', issueType: 'TASK', priority: 'MEDIUM', status: 'TODO', assigneeId: '' });
+  const [form, setForm] = useState({ title: '', description: '', issueType: 'TASK', priority: 'MEDIUM', status: 'TODO', assigneeId: '', sprintIds: [] });
+  const { data: sprints } = useApi(() => sprintApi.listByProject(projectId), [projectId]);
   const [files, setFiles] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -63,13 +66,13 @@ export default function CreateIssueModal({ projectId, projectKey, members = [], 
           <div className="field">
             <label>Status</label>
             <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              <option value="TODO">To Do</option><option value="IN_PROGRESS">In Progress</option><option value="DONE">Done</option>
+              <option value="TODO">To Do</option><option value="IN_PROGRESS">In Progress</option><option value="BLOCKED">Blocked</option><option value="ON_HOLD">On Hold</option><option value="DONE">Done</option>
             </Select>
           </div>
           <div className="field">
             <label>Priority</label>
             <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}>
-              {['LOW', 'MEDIUM', 'HIGH', 'HIGHEST'].map((t) => <option key={t} value={t}>{t}</option>)}
+              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'HIGHEST'].map((t) => <option key={t} value={t}>{t === 'HIGHEST' ? 'Critical (legacy)' : t}</option>)}
             </Select>
           </div>
         </div>
@@ -80,6 +83,7 @@ export default function CreateIssueModal({ projectId, projectKey, members = [], 
             {members.map((m) => <option key={m.user.id} value={m.user.id}>{m.user.name}</option>)}
           </Select>
         </div>
+        <div className="field"><label>Sprints</label><select className="select" multiple value={form.sprintIds} onChange={(e) => setForm({ ...form, sprintIds: [...e.target.selectedOptions].map((o) => o.value) })} style={{ minHeight: 90 }}>{sprints?.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.status})</option>)}</select><div className="helper-text">Select zero, one, or multiple sprints.</div></div>
         <div className="field"><label>Attachments / uploads</label><Input type="file" multiple onChange={(e) => setFiles([...e.target.files])} /><div className="helper-text">Optional: screenshots, logs, or test evidence (10 MB each).</div></div>
       </form>
     </Modal>

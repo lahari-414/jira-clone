@@ -33,8 +33,8 @@ const sprintService = {
   getById: async (id) => {
     const sprint = await sprintRepository.findById(id);
     if (!sprint) throw ApiError.notFound('Sprint not found');
-    const total = sprint.issues.length;
-    const completed = sprint.issues.filter((i) => i.status === 'DONE').length;
+    const total = sprint.issueLinks.length;
+    const completed = sprint.issueLinks.filter(({ issue }) => issue.status === 'DONE').length;
     return {
       ...sprint,
       progress: total === 0 ? 0 : Math.round((completed / total) * 100),

@@ -17,6 +17,7 @@ import ProjectSettings from './pages/ProjectSettings';
 import IssueDetail from './pages/IssueDetail';
 import Notifications from './pages/Notifications';
 import Search from './pages/Search';
+import MyIssues from './pages/MyIssues';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import AdminOverview from './pages/Admin/AdminOverview';
@@ -53,6 +54,7 @@ export default function App() {
 
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/my-issues" element={<MyIssues />} />
                 <Route path="/profile" element={<Profile />} />
 
                 <Route element={<ProtectedRoute roles={['ADMIN']} />}>

@@ -22,6 +22,9 @@ export default function IssueCard({ issue, draggable, onDragStart, onDragEnd, dr
         </div>
         {issue.assignee && <Avatar name={issue.assignee.name} />}
       </div>
+      <div className="text-muted" style={{ fontSize: 11, marginTop: 7 }}>
+        {issue.reporter?.name || 'Unknown reporter'} · {issue.sprints?.map((s) => s.name).join(', ') || 'No sprint'}
+      </div>
     </Link>
   );
 }

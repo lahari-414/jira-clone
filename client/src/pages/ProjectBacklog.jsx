@@ -1,34 +1,25 @@
-import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { issueApi } from '../api/issueApi';
-import { projectApi } from '../api/projectApi';
 import Spinner from '../components/common/Spinner';
 import ErrorState from '../components/common/ErrorState';
 import EmptyState from '../components/common/EmptyState';
-import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
-import CreateIssueModal from '../components/issue/CreateIssueModal';
 import { TYPE_BADGE } from '../utils/format';
 import { Link } from 'react-router-dom';
 
 export default function ProjectBacklog() {
   const { project } = useOutletContext();
   const { data: issues, loading, error, reload } = useApi(() => issueApi.backlog(project.id), [project.id]);
-  const { data: members } = useApi(() => projectApi.members(project.id), [project.id]);
-  const [showCreate, setShowCreate] = useState(false);
 
   return (
     <div>
-      <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
-        <h3 style={{ fontSize: 14 }}>Backlog</h3>
-        <Button size="sm" onClick={() => setShowCreate(true)}>+ Add issue</Button>
-      </div>
+      <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: 14 }}><h3 style={{ fontSize: 14 }}>Backlog</h3><span className="text-muted" style={{ fontSize: 12 }}>All TODO / unstarted work</span></div>
 
       {loading && <Spinner full />}
       {error && <ErrorState message={error} onRetry={reload} />}
       {!loading && issues?.length === 0 && (
-        <EmptyState title="Backlog is empty" message="Issues not yet in a sprint show up here." action={<Button size="sm" onClick={() => setShowCreate(true)}>+ Add issue</Button>} />
+        <EmptyState title="Backlog is empty" message="TODO issues automatically appear here." />
       )}
 
       {!loading && issues?.length > 0 && (
@@ -50,9 +41,6 @@ export default function ProjectBacklog() {
         </div>
       )}
 
-      {showCreate && (
-        <CreateIssueModal projectId={project.id} projectKey={project.key} members={members || []} onClose={() => setShowCreate(false)} onCreated={reload} />
-      )}
     </div>
   );
 }

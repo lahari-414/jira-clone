@@ -9,7 +9,7 @@ import IssueCard from '../components/board/IssueCard';
 import { STATUS_LABELS } from '../utils/format';
 import { useToast } from '../contexts/ToastContext';
 
-const COLUMNS = ['TODO', 'IN_PROGRESS', 'DONE'];
+const COLUMNS = ['TODO', 'IN_PROGRESS', 'BLOCKED', 'ON_HOLD', 'DONE'];
 
 export default function ProjectBoard() {
   const { project } = useOutletContext();
@@ -25,7 +25,7 @@ export default function ProjectBoard() {
     return (
       <EmptyState
         title="No work on the board yet"
-        message="Create an issue, then move it from Backlog to To Do when the team is ready to start."
+        message="Issues move through To Do, In Progress, Blocked, On Hold, and Done here."
       />
     );
   }

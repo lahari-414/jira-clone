@@ -1,158 +1,71 @@
 const issueRepository = require('../repositories/issueRepository');
-const projectRepository = require('../repositories/projectRepository');
 const activityService = require('./activityService');
 const notificationService = require('./notificationService');
+const { sendForRecipients } = require('./emailService');
 const { formatIssueKey } = require('../utils/issueKey');
+const prisma = require('../config/db');
 const ApiError = require('../utils/ApiError');
 
-// Attaches a human-readable "key" (e.g. PROJ-14) to an issue payload
 function withKey(issue) {
   if (!issue) return issue;
-  return { ...issue, key: formatIssueKey(issue.project.key, issue.issueNumber) };
+  return { ...issue, key: formatIssueKey(issue.project.key, issue.issueNumber), sprints: (issue.sprintLinks || []).map((link) => link.sprint) };
+}
+function notifyIssue(issue, event, recipients) { return sendForRecipients({ issue: withKey(issue), event, recipients }).catch(() => null); }
+async function validateSprints(projectId, sprintIds = []) {
+  const ids = [...new Set(sprintIds.filter(Boolean))];
+  if (!ids.length) return [];
+  if (await prisma.sprint.count({ where: { projectId, id: { in: ids } } }) !== ids.length) throw ApiError.badRequest('Every selected sprint must belong to this project');
+  return ids;
 }
 
 const issueService = {
   async create(projectId, reporterId, data) {
-    const allowed = (({ title, description, issueType, priority, status, assigneeId, sprintId, dueDate }) => ({
-      title,
-      description,
-      issueType,
-      priority,
-      status: status || 'TODO',
-      assigneeId: assigneeId || null,
-      sprintId: sprintId || null,
-      dueDate: dueDate ? new Date(dueDate) : null,
-    }))(data);
-
-    const issue = await issueRepository.createForProject(projectId, { ...allowed, reporterId });
-
-    await activityService.log({ issueId: issue.id, userId: reporterId, action: 'ISSUE_CREATED' });
-
-    if (issue.assigneeId && issue.assigneeId !== reporterId) {
-      await notificationService.notify({
-        userId: issue.assigneeId,
-        type: 'ASSIGNED',
-        title: 'New issue assigned to you',
-        message: `You were assigned to ${formatIssueKey(issue.project.key, issue.issueNumber)}: ${issue.title}`,
-        issueId: issue.id,
-      });
-    }
-
+    const sprintIds = await validateSprints(projectId, data.sprintIds || (data.sprintId ? [data.sprintId] : []));
+    const status = data.status || 'TODO'; const now = new Date();
+    const issue = await issueRepository.createForProject(projectId, {
+      title: data.title, description: data.description, issueType: data.issueType, priority: data.priority, status, reporterId,
+      assigneeId: data.assigneeId || null, assignedById: data.assigneeId ? reporterId : null, assignedAt: data.assigneeId ? now : null,
+      sprintId: sprintIds[0] || null, sprintLinks: { create: sprintIds.map((sprintId) => ({ sprintId })) }, dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      startedAt: status === 'IN_PROGRESS' ? now : null, completedAt: status === 'DONE' ? now : null,
+      completedById: status === 'DONE' ? reporterId : null, statusChangedAt: now,
+    });
+    await activityService.log({ issueId: issue.id, userId: reporterId, action: 'ISSUE_CREATED', newValue: status });
+    if (issue.assigneeId) await activityService.log({ issueId: issue.id, userId: reporterId, action: 'ISSUE_ASSIGNED', newValue: issue.assignee.name });
+    notifyIssue(issue, 'Work Created', [issue.assignee, issue.reporter]);
     return withKey(issue);
   },
-
-  async getById(id) {
-    const issue = await issueRepository.findById(id);
-    if (!issue) throw ApiError.notFound('Issue not found');
-    return withKey(issue);
-  },
-
+  async getById(id) { const issue = await issueRepository.findById(id); if (!issue) throw ApiError.notFound('Issue not found'); return withKey(issue); },
   async listByProject(projectId, filters = {}) {
-    const where = {};
-    if (filters.status) where.status = filters.status;
-    if (filters.assigneeId) where.assigneeId = filters.assigneeId;
-    if (filters.sprintId) where.sprintId = filters.sprintId;
-    if (filters.issueType) where.issueType = filters.issueType;
-    const issues = await issueRepository.findManyByProject(projectId, where);
-    return issues.map(withKey);
+    const where = {}; ['status', 'assigneeId', 'issueType', 'priority', 'reporterId', 'assignedById'].forEach((key) => { if (filters[key]) where[key] = filters[key]; });
+    if (filters.sprintId) where.sprintLinks = { some: { sprintId: filters.sprintId } };
+    return (await issueRepository.findManyByProject(projectId, where)).map(withKey);
   },
-
-  async getBoard(projectId) {
-    const issues = await issueRepository.findBoardIssues(projectId);
-    return issues.map(withKey);
-  },
-
-  async getBacklog(projectId) {
-    const issues = await issueRepository.findBacklogIssues(projectId);
-    return issues.map(withKey);
-  },
-
+  async getBoard(projectId) { return (await issueRepository.findBoardIssues(projectId)).map(withKey); },
+  async getBacklog(projectId) { return (await issueRepository.findBacklogIssues(projectId)).map(withKey); },
   async update(id, userId, data) {
-    const before = await issueRepository.findById(id);
-    if (!before) throw ApiError.notFound('Issue not found');
-
-    const allowed = (({ title, description, issueType, priority, dueDate }) => ({
-      title,
-      description,
-      issueType,
-      priority,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-    }))(data);
-    Object.keys(allowed).forEach((k) => allowed[k] === undefined && delete allowed[k]);
-
-    const issue = await issueRepository.update(id, allowed);
-    await activityService.log({ issueId: id, userId, action: 'ISSUE_UPDATED' });
+    const before = await issueRepository.findById(id); if (!before) throw ApiError.notFound('Issue not found'); const allowed = {};
+    ['title', 'description', 'issueType', 'priority'].forEach((key) => { if (data[key] !== undefined) allowed[key] = data[key]; });
+    if (data.dueDate !== undefined) allowed.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    if (data.sprintIds !== undefined) { const ids = await validateSprints(before.projectId, data.sprintIds); allowed.sprintId = ids[0] || null; allowed.sprintLinks = { deleteMany: {}, create: ids.map((sprintId) => ({ sprintId })) }; }
+    const issue = await issueRepository.update(id, allowed); await activityService.log({ issueId: id, userId, action: 'ISSUE_UPDATED' });
+    if (data.priority !== undefined && data.priority !== before.priority) { await activityService.log({ issueId: id, userId, action: 'PRIORITY_CHANGED', oldValue: before.priority, newValue: data.priority }); notifyIssue(issue, 'Priority Changed', [issue.assignee, issue.reporter, issue.assignedBy]); }
+    if (data.sprintIds !== undefined) { await activityService.log({ issueId: id, userId, action: 'SPRINTS_UPDATED', oldValue: before.sprintLinks.map((x) => x.sprint.name).join(', ') || 'None', newValue: issue.sprintLinks.map((x) => x.sprint.name).join(', ') || 'None' }); notifyIssue(issue, 'Sprint Updated', [issue.assignee, issue.reporter, issue.assignedBy]); }
     return withKey(issue);
   },
-
   async changeStatus(id, userId, status) {
-    const before = await issueRepository.findById(id);
-    if (!before) throw ApiError.notFound('Issue not found');
-
-    const issue = await issueRepository.update(id, { status });
-    await activityService.log({
-      issueId: id,
-      userId,
-      action: 'STATUS_CHANGED',
-      oldValue: before.status,
-      newValue: status,
-    });
-
-    if (issue.assigneeId && issue.assigneeId !== userId) {
-      await notificationService.notify({
-        userId: issue.assigneeId,
-        type: 'STATUS_CHANGED',
-        title: 'Issue status changed',
-        message: `${formatIssueKey(issue.project.key, issue.issueNumber)} moved to ${status.replace('_', ' ')}`,
-        issueId: id,
-      });
-    }
-    return withKey(issue);
+    const before = await issueRepository.findById(id); if (!before) throw ApiError.notFound('Issue not found'); if (before.status === status) return withKey(before);
+    const now = new Date(); const data = { status, statusChangedAt: now }; if (status === 'IN_PROGRESS' && !before.startedAt) data.startedAt = now; if (status === 'DONE') { data.completedAt = now; data.completedById = userId; }
+    const issue = await issueRepository.update(id, data); await activityService.log({ issueId: id, userId, action: 'STATUS_CHANGED', oldValue: before.status, newValue: status });
+    if (status === 'IN_PROGRESS' && !before.startedAt) await activityService.log({ issueId: id, userId, action: 'WORK_STARTED' }); if (status === 'DONE') await activityService.log({ issueId: id, userId, action: 'ISSUE_COMPLETED' });
+    const event = status === 'DONE' ? 'Work Completed' : status === 'BLOCKED' ? 'Work Blocked' : status === 'ON_HOLD' ? 'Work On Hold' : status === 'IN_PROGRESS' ? 'Work Started' : 'Status Changed';
+    await notificationService.notify({ userId: issue.assigneeId, type: 'STATUS_CHANGED', title: event, message: `${withKey(issue).key} moved to ${status.replaceAll('_', ' ')}`, issueId: id }); notifyIssue(issue, event, [issue.assignee, issue.reporter, issue.assignedBy]); return withKey(issue);
   },
-
   async changeAssignee(id, userId, assigneeId) {
-    const before = await issueRepository.findById(id);
-    if (!before) throw ApiError.notFound('Issue not found');
-
-    const issue = await issueRepository.update(id, { assigneeId: assigneeId || null });
-    await activityService.log({
-      issueId: id,
-      userId,
-      action: 'ASSIGNEE_CHANGED',
-      oldValue: before.assignee?.name || 'Unassigned',
-      newValue: issue.assignee?.name || 'Unassigned',
-    });
-
-    if (assigneeId && assigneeId !== userId) {
-      await notificationService.notify({
-        userId: assigneeId,
-        type: 'ASSIGNED',
-        title: 'You were assigned to an issue',
-        message: `${formatIssueKey(issue.project.key, issue.issueNumber)}: ${issue.title}`,
-        issueId: id,
-      });
-    }
-    return withKey(issue);
+    const before = await issueRepository.findById(id); if (!before) throw ApiError.notFound('Issue not found'); const issue = await issueRepository.update(id, { assigneeId: assigneeId || null, ...(assigneeId ? { assignedById: userId, assignedAt: new Date() } : {}) });
+    const reassigned = Boolean(before.assigneeId && assigneeId && before.assigneeId !== assigneeId); await activityService.log({ issueId: id, userId, action: reassigned ? 'ISSUE_REASSIGNED' : 'ISSUE_ASSIGNED', oldValue: before.assignee?.name || 'Unassigned', newValue: issue.assignee?.name || 'Unassigned' });
+    if (assigneeId) await notificationService.notify({ userId: assigneeId, type: reassigned ? 'REASSIGNED' : 'ASSIGNED', title: reassigned ? 'Issue reassigned to you' : 'Work assigned to you', message: `${withKey(issue).key}: ${issue.title}`, issueId: id }); notifyIssue(issue, reassigned ? 'Work Reassigned' : 'Work Assigned', [issue.assignee, issue.reporter, issue.assignedBy]); return withKey(issue);
   },
-
-  async changePriority(id, userId, priority) {
-    const before = await issueRepository.findById(id);
-    if (!before) throw ApiError.notFound('Issue not found');
-
-    const issue = await issueRepository.update(id, { priority });
-    await activityService.log({
-      issueId: id,
-      userId,
-      action: 'PRIORITY_CHANGED',
-      oldValue: before.priority,
-      newValue: priority,
-    });
-    return withKey(issue);
-  },
-
-  async delete(id) {
-    return issueRepository.delete(id);
-  },
+  async changePriority(id, userId, priority) { const before = await issueRepository.findById(id); if (!before) throw ApiError.notFound('Issue not found'); const issue = await issueRepository.update(id, { priority }); await activityService.log({ issueId: id, userId, action: 'PRIORITY_CHANGED', oldValue: before.priority, newValue: priority }); notifyIssue(issue, 'Priority Changed', [issue.assignee, issue.reporter, issue.assignedBy]); return withKey(issue); },
+  delete: (id) => issueRepository.delete(id),
 };
-
 module.exports = issueService;

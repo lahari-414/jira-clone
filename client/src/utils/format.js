@@ -25,14 +25,19 @@ export const STATUS_LABELS = {
   TODO: 'To Do',
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
+  BLOCKED: 'Blocked',
+  ON_HOLD: 'On Hold',
   DONE: 'Done',
 };
+
+export const STATUS_BADGE = { BACKLOG: 'grey', TODO: 'grey', IN_PROGRESS: 'blue', IN_REVIEW: 'violet', BLOCKED: 'red', ON_HOLD: 'amber', DONE: 'green' };
 
 export const PRIORITY_COLORS = {
   LOW: '#6B7280',
   MEDIUM: '#3E5AF0',
   HIGH: '#D98A2B',
   HIGHEST: '#C63B4B',
+  CRITICAL: '#C63B4B',
 };
 
 export const TYPE_BADGE = {

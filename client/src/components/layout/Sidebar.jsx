@@ -6,6 +6,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: '⌂' },
   { to: '/projects', label: 'Projects', icon: '▤' },
   { to: '/search', label: 'Issues', icon: '◫' },
+  { to: '/my-issues', label: 'My issues', icon: '✓' },
   { to: '/notifications', label: 'Notifications', icon: '◔' },
 ];
 

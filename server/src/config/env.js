@@ -17,4 +17,6 @@ module.exports = {
   bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS) || 10,
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
+  smtpUrl: process.env.SMTP_URL,
+  mailFrom: process.env.MAIL_FROM || 'AmiVel PMS <no-reply@amivel.local>',
 };

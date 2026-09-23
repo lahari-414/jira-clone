@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { issueApi } from '../api/issueApi';
 import { projectApi } from '../api/projectApi';
+import { sprintApi } from '../api/sprintApi';
 import Spinner from '../components/common/Spinner';
 import ErrorState from '../components/common/ErrorState';
 import Badge from '../components/common/Badge';
@@ -11,7 +12,7 @@ import Select from '../components/common/Select';
 import Textarea from '../components/common/Textarea';
 import Button from '../components/common/Button';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import { STATUS_LABELS, TYPE_BADGE, timeAgo, formatDate } from '../utils/format';
+import { STATUS_LABELS, STATUS_BADGE, TYPE_BADGE, timeAgo, formatDate } from '../utils/format';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,9 +23,10 @@ export default function IssueDetail() {
   const { user } = useAuth();
   const { data: issue, loading, error, reload, setData } = useApi(() => issueApi.get(id), [id]);
   const { data: comments, reload: reloadComments } = useApi(() => issueApi.comments(id), [id]);
-  const { data: activity } = useApi(() => issueApi.activity(id), [id]);
+  const { data: activity, reload: reloadActivity } = useApi(() => issueApi.activity(id), [id]);
   const { data: attachments, reload: reloadAttachments } = useApi(() => issueApi.attachments(id), [id]);
   const { data: members } = useApi(() => (issue ? projectApi.members(issue.projectId) : Promise.resolve([])), [issue?.projectId]);
+  const { data: sprints } = useApi(() => (issue ? sprintApi.listByProject(issue.projectId) : Promise.resolve([])), [issue?.projectId]);
 
   const [commentText, setCommentText] = useState('');
   const [posting, setPosting] = useState(false);
@@ -94,7 +96,7 @@ export default function IssueDetail() {
   const saveIssue = async () => {
     try {
       const updated = await issueApi.update(id, draft);
-      setData(updated); setEditing(false);
+      setData(updated); setEditing(false); reloadActivity();
       toast.success('Issue updated');
     } catch (err) { toast.error(err.response?.data?.message || 'Could not update issue'); }
   };
@@ -114,14 +116,15 @@ export default function IssueDetail() {
         </div>
         <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
           <h1 style={{ fontSize: 20, margin: 0 }}>{issue.title}</h1>
-          {!editing && <Button size="sm" variant="secondary" onClick={() => { setDraft({ title: issue.title, description: issue.description || '', issueType: issue.issueType, priority: issue.priority, dueDate: issue.dueDate?.slice(0, 10) || '' }); setEditing(true); }}>Edit issue</Button>}
+          {!editing && <Button size="sm" variant="secondary" onClick={() => { setDraft({ title: issue.title, description: issue.description || '', issueType: issue.issueType, priority: issue.priority, dueDate: issue.dueDate?.slice(0, 10) || '', sprintIds: issue.sprints?.map((s) => s.id) || [] }); setEditing(true); }}>Edit issue</Button>}
         </div>
 
         <div className="card card-pad" style={{ marginBottom: 16 }}>
           {editing ? <>
             <div className="field"><label>Issue title</label><input className="input" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
             <div className="field"><label>Description</label><Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></div>
-            <div className="grid-2"><div className="field"><label>Priority</label><Select value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })}>{['LOW', 'MEDIUM', 'HIGH', 'HIGHEST'].map((value) => <option key={value}>{value}</option>)}</Select></div><div className="field"><label>Due date</label><input className="input" type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} /></div></div>
+            <div className="grid-2"><div className="field"><label>Priority</label><Select value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })}>{['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'HIGHEST'].map((value) => <option key={value}>{value}</option>)}</Select></div><div className="field"><label>Due date</label><input className="input" type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} /></div></div>
+            <div className="field"><label>Sprints</label><select className="select" multiple value={draft.sprintIds} onChange={(e) => setDraft({ ...draft, sprintIds: [...e.target.selectedOptions].map((o) => o.value) })} style={{ minHeight: 90 }}>{sprints?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
             <div className="flex-row" style={{ justifyContent: 'flex-end' }}><Button size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancel</Button><Button size="sm" onClick={saveIssue}>Save changes</Button></div>
           </> : <><h3 style={{ fontSize: 13, marginBottom: 8 }}>Description</h3><p style={{ margin: 0, fontSize: 13.5, whiteSpace: 'pre-wrap', color: 'var(--ink-700)' }}>{issue.description || 'No description provided.'}</p></>}
         </div>
@@ -178,7 +181,7 @@ export default function IssueDetail() {
                 <strong>{a.user.name}</strong> {a.action.replaceAll('_', ' ').toLowerCase()}
                 {a.oldValue && a.newValue ? ` from ${a.oldValue} to ${a.newValue}` : ''}
               </span>
-              <span className="text-muted" style={{ fontSize: 11, marginLeft: 'auto' }}>{timeAgo(a.createdAt)}</span>
+              <span className="text-muted" style={{ fontSize: 11, marginLeft: 'auto' }}>{formatDateTime(a.createdAt)}</span>
             </div>
           ))}
         </div>
@@ -187,19 +190,19 @@ export default function IssueDetail() {
       <div className="card card-pad">
         <div className="field">
           <label>Status</label>
-          <Select value={issue.status} onChange={(e) => updateField('status', e.target.value, () => issueApi.changeStatus(id, e.target.value))}>
+          <Select value={issue.status} onChange={async (e) => { try { setData(await issueApi.changeStatus(id, e.target.value)); reloadActivity(); } catch { toast.error('Could not update status'); } }}>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </Select>
         </div>
         <div className="field">
           <label>Priority</label>
-          <Select value={issue.priority} onChange={(e) => updateField('priority', e.target.value, () => issueApi.changePriority(id, e.target.value))}>
-            {['LOW', 'MEDIUM', 'HIGH', 'HIGHEST'].map((p) => <option key={p} value={p}>{p}</option>)}
+          <Select value={issue.priority} onChange={async (e) => { try { setData(await issueApi.changePriority(id, e.target.value)); reloadActivity(); } catch { toast.error('Could not update priority'); } }}>
+            {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'HIGHEST'].map((p) => <option key={p} value={p}>{p}</option>)}
           </Select>
         </div>
         <div className="field">
           <label>Assignee</label>
-          <Select value={issue.assigneeId || ''} onChange={(e) => updateField('assigneeId', e.target.value, () => issueApi.changeAssignee(id, e.target.value || null))}>
+          <Select value={issue.assigneeId || ''} onChange={async (e) => { try { setData(await issueApi.changeAssignee(id, e.target.value || null)); reloadActivity(); } catch { toast.error('Could not update assignee'); } }}>
             <option value="">Unassigned</option>
             {members?.map((m) => <option key={m.user.id} value={m.user.id}>{m.user.name}</option>)}
           </Select>
@@ -212,6 +215,11 @@ export default function IssueDetail() {
           <label>Reporter</label>
           <div className="flex-row"><Avatar name={issue.reporter.name} /><span style={{ fontSize: 13 }}>{issue.reporter.name}</span></div>
         </div>
+        <div className="field"><label>Assigned by</label><div style={{ fontSize: 13 }}>{issue.assignedBy?.name || '—'}</div></div>
+        <div className="field"><label>Completed by</label><div style={{ fontSize: 13 }}>{issue.completedBy?.name || '—'}</div></div>
+        <div className="field"><label>Sprint(s)</label><div style={{ fontSize: 13 }}>{issue.sprints?.map((s) => s.name).join(', ') || '—'}</div></div>
+        <div className="divider" />
+        <div className="field"><label>Lifecycle timestamps</label><div className="timestamp-list"><span>Created: {formatDateTime(issue.createdAt)}</span><span>Assigned: {formatDateTime(issue.assignedAt)}</span><span>Started: {formatDateTime(issue.startedAt)}</span><span>Status changed: {formatDateTime(issue.statusChangedAt)}</span><span>Completed: {formatDateTime(issue.completedAt)}</span><span>Updated: {formatDateTime(issue.updatedAt)}</span></div></div>
         <div className="field">
           <label>Due date</label>
           <div style={{ fontSize: 13 }}>{formatDate(issue.dueDate)}</div>
@@ -233,3 +241,5 @@ export default function IssueDetail() {
     </div>
   );
 }
+
+function formatDateTime(value) { return value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' }) : '—'; }

@@ -2,7 +2,7 @@ const prisma = require('../config/db');
 
 const sprintRepository = {
   create: (data) => prisma.sprint.create({ data }),
-  findById: (id) => prisma.sprint.findUnique({ where: { id }, include: { issues: true } }),
+  findById: (id) => prisma.sprint.findUnique({ where: { id }, include: { issueLinks: { include: { issue: true } } } }),
   findByProject: (projectId) =>
     prisma.sprint.findMany({ where: { projectId }, orderBy: { createdAt: 'desc' } }),
   findActiveByProject: (projectId) =>

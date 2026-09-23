@@ -7,7 +7,7 @@ import EmptyState from '../components/common/EmptyState';
 import Badge from '../components/common/Badge';
 import Avatar from '../components/common/Avatar';
 import { Link } from 'react-router-dom';
-import { STATUS_LABELS, TYPE_BADGE, timeAgo } from '../utils/format';
+import { STATUS_LABELS, STATUS_BADGE, TYPE_BADGE, timeAgo } from '../utils/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 const COLORS = ['#3E5AF0', '#D98A2B', '#C63B4B', '#1F8A5F', '#7A4FD1'];
@@ -35,10 +35,11 @@ export default function Dashboard() {
       </div>
 
       <div className="stat-grid">
-        <div className="card stat-card"><div className="num">{totals.totalProjects}</div><div className="label">Projects</div></div>
-        <div className="card stat-card"><div className="num">{totals.openIssues}</div><div className="label">Open issues</div></div>
-        <div className="card stat-card"><div className="num">{totals.completedIssues}</div><div className="label">Completed issues</div></div>
-        <div className="card stat-card"><div className="num">{totals.highPriorityIssues}</div><div className="label">High priority</div></div>
+        <Link to="/projects" className="card stat-card"><div className="num">{totals.totalProjects}</div><div className="label">Projects</div></Link>
+        <Link to="/search" className="card stat-card"><div className="num">{totals.openIssues}</div><div className="label">Open issues</div></Link>
+        <Link to="/search?status=DONE" className="card stat-card"><div className="num">{totals.completedIssues}</div><div className="label">Done issues</div></Link>
+        <Link to="/search?priority=HIGH" className="card stat-card"><div className="num">{totals.highPriorityIssues}</div><div className="label">High priority</div></Link>
+        <Link to="/my-issues" className="card stat-card"><div className="num">{myIssues.length}</div><div className="label">My issues</div></Link>
       </div>
 
       <div className="grid-2" style={{ marginBottom: 20 }}>
@@ -121,7 +122,7 @@ export default function Dashboard() {
             <Link to={`/projects/${s.projectId}/sprints`} key={s.id} className="flex-row" style={{ padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <Badge variant="blue">{s.project.key}</Badge>
               <span style={{ fontSize: 13, flex: 1 }}>{s.name}</span>
-              <span className="text-muted" style={{ fontSize: 12 }}>{s._count.issues} issues</span>
+              <span className="text-muted" style={{ fontSize: 12 }}>{s._count.issueLinks} issues</span>
             </Link>
           ))}
         </div>

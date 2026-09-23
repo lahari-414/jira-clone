@@ -3,7 +3,7 @@ const { formatIssueKey } = require('../utils/issueKey');
 
 const searchService = {
   async searchIssues(user, params) {
-    const { q, status, priority, issueType, projectId, assigneeId, reporterId, label } = params;
+    const { q, status, priority, issueType, projectId, assigneeId, reporterId, assignedById, sprintId, label } = params;
 
     const where = { AND: [] };
 
@@ -17,12 +17,17 @@ const searchService = {
     if (issueType) where.AND.push({ issueType });
     if (assigneeId) where.AND.push({ assigneeId });
     if (reporterId) where.AND.push({ reporterId });
+    if (assignedById) where.AND.push({ assignedById });
+    if (sprintId) where.AND.push({ sprintLinks: { some: { sprintId } } });
     if (label) where.AND.push({ labels: { some: { label: { name: label } } } });
     if (q) {
       where.AND.push({
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
+          { project: { name: { contains: q, mode: 'insensitive' } } },
+          { reporter: { name: { contains: q, mode: 'insensitive' } } },
+          { assignee: { name: { contains: q, mode: 'insensitive' } } },
         ],
       });
     }
