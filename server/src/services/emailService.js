@@ -46,32 +46,192 @@ function bodyFor(event, issue) {
 }
 
 async function sendForRecipients({ issue, event, recipients }) {
+  console.log('\n=================================');
+  console.log('EMAIL SERVICE STARTED');
+  console.log('EVENT:', event);
+  console.log('ISSUE KEY:', issue?.key);
+  console.log('ISSUE ID:', issue?.id);
+  console.log('PROJECT:', issue?.project?.name);
+  console.log('RECIPIENT CANDIDATES:');
+
+  console.log(
+    (recipients || []).map((user) => ({
+      id: user?.id,
+      name: user?.name,
+      email: user?.email,
+    }))
+  );
+
   const projectManagers = await prisma.projectMember.findMany({
-    where: { projectId: issue.projectId, OR: [{ projectRole: 'MANAGER' }, { user: { role: 'PROJECT_MANAGER' } }] },
-    include: { user: true },
+    where: {
+      projectId: issue.projectId,
+      OR: [
+        { projectRole: 'MANAGER' },
+        { user: { role: 'PROJECT_MANAGER' } },
+      ],
+    },
+    include: {
+      user: true,
+    },
   });
-  const project = await prisma.project.findUnique({ where: { id: issue.projectId }, include: { owner: true } });
-  const allRecipients = [...recipients, project?.owner, ...projectManagers.map(({ user }) => user)].filter(Boolean);
-  const unique = [...new Map(allRecipients.filter((u) => u.email).map((u) => [u.email, u])).values()];
+
+  const project = await prisma.project.findUnique({
+    where: {
+      id: issue.projectId,
+    },
+    include: {
+      owner: true,
+    },
+  });
+
+  const allRecipients = [
+    ...(recipients || []),
+    project?.owner,
+    ...projectManagers.map(({ user }) => user),
+  ].filter(Boolean);
+
+  const unique = [
+    ...new Map(
+      allRecipients
+        .filter((user) => user?.email)
+        .map((user) => [user.email.toLowerCase(), user])
+    ).values(),
+  ];
+
+  console.log('FINAL EMAIL RECIPIENTS:');
+
+  console.log(
+    unique.map((user) => ({
+      name: user.name,
+      email: user.email,
+    }))
+  );
+
+  if (!unique.length) {
+    console.error('NO EMAIL RECIPIENTS FOUND');
+    return;
+  }
+
   const subject = `${event} – ${issue.key}`;
-  await Promise.all(unique.map(async (user) => {
-    const eventKey = `${issue.id}:${event}:${issue.updatedAt.toISOString()}:${user.email}`;
+
+  console.log('EMAIL SUBJECT:', subject);
+
+  const smtp = getTransport();
+
+  if (!smtp) {
+    console.error('SMTP TRANSPORT NOT AVAILABLE');
+    console.error('SMTP USER:', env.smtpUser);
+    console.error('SMTP HOST:', env.smtpHost);
+
+    return;
+  }
+
+  console.log('SMTP TRANSPORT AVAILABLE');
+
+  for (const user of unique) {
+    const eventKey =
+      `${issue.id}:${event}:${issue.updatedAt.toISOString()}:${user.email}`;
+
     let record;
+
     try {
-      record = await prisma.emailNotification.create({ data: { issueId: issue.id, userId: user.id, event, recipientEmail: user.email, subject, eventKey } });
-      const smtp = getTransport();
-      if (!smtp) {
-        return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'QUEUED' } });
-      }
-      await smtp.sendMail({ from: env.mailFrom, to: user.email, subject, text: bodyFor(event, issue) });
-      return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'SENT', sentAt: new Date() } });
+      record = await prisma.emailNotification.create({
+        data: {
+          issueId: issue.id,
+          userId: user.id,
+          event,
+          recipientEmail: user.email,
+          subject,
+          eventKey,
+        },
+      });
+
+      console.log(
+        `EMAIL RECORD CREATED: ${user.email}`
+      );
+
+      const info = await smtp.sendMail({
+        from: env.mailFrom,
+        to: user.email,
+        subject,
+        text: bodyFor(event, issue),
+      });
+
+      console.log('=================================');
+      console.log('EMAIL SENT SUCCESSFULLY');
+      console.log('TO:', user.email);
+      console.log('MESSAGE ID:', info.messageId);
+      console.log('RESPONSE:', info.response);
+      console.log('=================================');
+
+      await prisma.emailNotification.update({
+        where: {
+          id: record.id,
+        },
+        data: {
+          status: 'SENT',
+          sentAt: new Date(),
+        },
+      });
     } catch (error) {
-      // A duplicate event is safe to ignore. Other failures remain auditable.
-      if (error.code === 'P2002') return null;
-      if (record) return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'FAILED', error: error.message } }).catch(() => null);
-      return prisma.emailNotification.create({ data: { issueId: issue.id, userId: user.id, event, recipientEmail: user.email, subject, status: 'FAILED', error: error.message, eventKey: `${eventKey}:failed` } }).catch(() => null);
+      console.error('=================================');
+      console.error('EMAIL SEND FAILED');
+      console.error('TO:', user.email);
+      console.error('ERROR:', error.message);
+      console.error('FULL ERROR:', error);
+      console.error('=================================');
+
+      if (error.code === 'P2002') {
+        console.log(
+          'Duplicate email notification skipped:',
+          user.email
+        );
+        continue;
+      }
+
+      if (record) {
+        await prisma.emailNotification
+          .update({
+            where: {
+              id: record.id,
+            },
+            data: {
+              status: 'FAILED',
+              error: error.message,
+            },
+          })
+          .catch(() => null);
+      }
     }
-  }));
+  }
 }
+// async function sendForRecipients({ issue, event, recipients }) {
+//   const projectManagers = await prisma.projectMember.findMany({
+//     where: { projectId: issue.projectId, OR: [{ projectRole: 'MANAGER' }, { user: { role: 'PROJECT_MANAGER' } }] },
+//     include: { user: true },
+//   });
+//   const project = await prisma.project.findUnique({ where: { id: issue.projectId }, include: { owner: true } });
+//   const allRecipients = [...recipients, project?.owner, ...projectManagers.map(({ user }) => user)].filter(Boolean);
+//   const unique = [...new Map(allRecipients.filter((u) => u.email).map((u) => [u.email, u])).values()];
+//   const subject = `${event} – ${issue.key}`;
+//   await Promise.all(unique.map(async (user) => {
+//     const eventKey = `${issue.id}:${event}:${issue.updatedAt.toISOString()}:${user.email}`;
+//     let record;
+//     try {
+//       record = await prisma.emailNotification.create({ data: { issueId: issue.id, userId: user.id, event, recipientEmail: user.email, subject, eventKey } });
+//       const smtp = getTransport();
+//       if (!smtp) {
+//         return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'QUEUED' } });
+//       }
+//       await smtp.sendMail({ from: env.mailFrom, to: user.email, subject, text: bodyFor(event, issue) });
+//       return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'SENT', sentAt: new Date() } });
+//     } catch (error) {
+//       // A duplicate event is safe to ignore. Other failures remain auditable.
+//       if (error.code === 'P2002') return null;
+//       if (record) return prisma.emailNotification.update({ where: { id: record.id }, data: { status: 'FAILED', error: error.message } }).catch(() => null);
+//       return prisma.emailNotification.create({ data: { issueId: issue.id, userId: user.id, event, recipientEmail: user.email, subject, status: 'FAILED', error: error.message, eventKey: `${eventKey}:failed` } }).catch(() => null);
+//     }
+//   }));
+// }
 
 module.exports = { sendForRecipients };

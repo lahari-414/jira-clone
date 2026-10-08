@@ -10,7 +10,45 @@ function withKey(issue) {
   if (!issue) return issue;
   return { ...issue, key: formatIssueKey(issue.project.key, issue.issueNumber), sprints: (issue.sprintLinks || []).map((link) => link.sprint) };
 }
-function notifyIssue(issue, event, recipients) { return sendForRecipients({ issue: withKey(issue), event, recipients }).catch(() => null); }
+// function notifyIssue(issue, event, recipients) { return sendForRecipients({ issue: withKey(issue), event, recipients }).catch(() => null); }
+// function notifyIssue(issue, event, recipients) {
+//   return sendForRecipients({
+//     issue: withKey(issue),
+//     event,
+//     recipients
+//   }).catch((error) => {
+//     console.error(`EMAIL FAILED: ${event}`, error);
+//     return null;
+//   });
+// }
+function notifyIssue(issue, event, recipients) {
+  console.log('=================================');
+  console.log('EMAIL EVENT:', event);
+  console.log('ISSUE:', issue?.key);
+  console.log(
+    'RECIPIENTS:',
+    (recipients || []).map((user) => ({
+      id: user?.id,
+      name: user?.name,
+      email: user?.email,
+    }))
+  );
+
+  return sendForRecipients({
+    issue: withKey(issue),
+    event,
+    recipients,
+  })
+    .then(() => {
+      console.log('EMAIL PROCESS COMPLETED:', event);
+    })
+    .catch((error) => {
+      console.error('EMAIL FAILED:', event);
+      console.error(error);
+      throw error;
+    });
+}
+
 async function validateSprints(projectId, sprintIds = []) {
   const ids = [...new Set(sprintIds.filter(Boolean))];
   if (ids.length > 1) throw ApiError.badRequest('An issue can belong to only one sprint');

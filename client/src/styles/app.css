@@ -216,7 +216,7 @@
 .page-header h1 { font-size: clamp(23px, 2vw, 30px); color: #102a56; }
 .dashboard-hero { min-height: 108px; padding: 18px 24px; border-radius: 12px; background: linear-gradient(105deg, #e8f8fa 0%, #eaf3ff 64%, #e4f2fb 100%); display: flex; align-items: center; justify-content: space-between; }
 .dashboard-hero-art { width: 136px; height: 88px; flex: 0 0 auto; margin-right: 4px; }
-.dashboard-idea-shortcut { position: fixed; z-index: 1000; right: 8.4vw; bottom: 6.5vh; display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid rgba(36,117,232,.18); border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(20,48,91,.24); transition: transform .16s ease, box-shadow .16s ease; }
+.dashboard-idea-shortcut { position: fixed; z-index: 1000; right: 7.4vw; bottom: 6.5vh; display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid rgba(36,117,232,.18); border-radius: 50%; background: #fff; box-shadow: 0 8px 24px rgba(20,48,91,.24); transition: transform .16s ease, box-shadow .16s ease; }
 .dashboard-idea-shortcut:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(20,48,91,.3); }
 .dashboard-idea-shortcut:focus-visible { outline: 3px solid #2475e8; outline-offset: 3px; }
 .dashboard-idea-shortcut img { display: block; width: 58px; height: 58px; object-fit: contain; }
