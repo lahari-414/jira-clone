@@ -22,7 +22,6 @@ const projectRepository = {
     });
   },
   update: (id, data) => prisma.project.update({ where: { id }, data }),
-  archive: (id) => prisma.project.update({ where: { id }, data: { status: 'ARCHIVED' } }),
   delete: (id) => prisma.project.delete({ where: { id } }),
   addMember: (projectId, userId, projectRole) =>
     prisma.projectMember.create({ data: { projectId, userId, projectRole } }),

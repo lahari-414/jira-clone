@@ -13,7 +13,7 @@ router.post('/', createProjectRules, validate, projectController.create);
 router.get('/:id', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, projectController.getById);
 router.put('/:id', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, requireProjectManager, projectController.update);
 router.delete('/:id', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, requireProjectManager, projectController.remove);
-router.patch('/:id/archive', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, requireProjectManager, projectController.archive);
+router.patch('/:id/complete', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, requireProjectManager, projectController.complete);
 
 router.get('/:id/members', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, projectController.listMembers);
 router.post('/:id/members', (req, res, next) => { req.params.projectId = req.params.id; next(); }, requireProjectMember, requireProjectManager, projectController.addMember);

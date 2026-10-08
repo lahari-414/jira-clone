@@ -4,8 +4,18 @@ const env = require('../config/env');
 // SMTP is deliberately optional in local development; every attempt is still persisted.
 let transport;
 function getTransport() {
-  if (!env.smtpUrl) return null;
-  if (!transport) transport = require('nodemailer').createTransport(env.smtpUrl);
+  if (!env.smtpUrl && !(env.smtpUser && env.smtpPassword)) return null;
+  if (!transport) {
+    const nodemailer = require('nodemailer');
+    transport = env.smtpUrl
+      ? nodemailer.createTransport(env.smtpUrl)
+      : nodemailer.createTransport({
+        host: env.smtpHost,
+        port: env.smtpPort,
+        secure: env.smtpSecure || env.smtpPort === 465,
+        auth: { user: env.smtpUser, pass: env.smtpPassword },
+      });
+  }
   return transport;
 }
 

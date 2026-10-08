@@ -24,6 +24,8 @@ import AdminOverview from './pages/Admin/AdminOverview';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminAuditLogs from './pages/Admin/AdminAuditLogs';
 import NotFound from './pages/NotFound';
+import Communicating from './pages/Communicating';
+import SprintBoard from './pages/SprintBoard';
 
 import './styles/app.css';
 
@@ -46,6 +48,7 @@ export default function App() {
                   <Route index element={<ProjectBoard />} />
                   <Route path="backlog" element={<ProjectBacklog />} />
                   <Route path="sprints" element={<ProjectSprints />} />
+                  <Route path="sprints/:sprintId" element={<SprintBoard />} />
                   <Route path="issues" element={<ProjectIssues />} />
                   <Route path="settings" element={<ProjectSettings />} />
                 </Route>
@@ -53,6 +56,7 @@ export default function App() {
                 <Route path="/issues/:id" element={<IssueDetail />} />
 
                 <Route path="/notifications" element={<Notifications />} />
+                <Route path="/communicating" element={<Communicating />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/my-issues" element={<MyIssues />} />
                 <Route path="/profile" element={<Profile />} />

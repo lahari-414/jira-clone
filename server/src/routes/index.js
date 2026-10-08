@@ -11,6 +11,7 @@ router.use('/notifications', require('./notificationRoutes'));
 router.use('/search', require('./searchRoutes'));
 router.use('/dashboard', require('./dashboardRoutes'));
 router.use('/saved-filters', require('./savedFilterRoutes'));
+router.use('/ideas', require('./ideaRoutes'));
 router.use('/admin', require('./adminRoutes'));
 
 module.exports = router;

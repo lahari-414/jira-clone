@@ -1,0 +1,10 @@
+const router = require('express').Router({ mergeParams: true });
+const controller = require('../controllers/incidentController');
+const { authenticate } = require('../middleware/auth');
+const { requireProjectMember, requireProjectManager } = require('../middleware/projectAccess');
+const { body } = require('express-validator');
+const validate = require('../middleware/validate');
+router.use(authenticate, requireProjectMember);
+router.get('/', controller.list);
+router.patch('/:id', requireProjectManager, [body('status').optional().isIn(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED']), body('priority').optional().isIn(['LOW', 'MEDIUM', 'HIGH', 'HIGHEST', 'CRITICAL'])], validate, controller.update);
+module.exports = router;

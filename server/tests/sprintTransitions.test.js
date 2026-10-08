@@ -1,7 +1,7 @@
 // Verifies the sprint state machine rules without touching the database.
 // Re-implements the transition table used by sprintService for isolated testing.
 const TRANSITIONS = {
-  PLANNED: ['ACTIVE', 'CANCELLED'],
+  FUTURE: ['ACTIVE', 'CANCELLED'],
   ACTIVE: ['COMPLETED', 'CANCELLED'],
   COMPLETED: [],
   CANCELLED: [],
@@ -12,8 +12,8 @@ function canTransition(from, to) {
 }
 
 describe('sprint status transitions', () => {
-  it('allows PLANNED -> ACTIVE -> COMPLETED', () => {
-    expect(canTransition('PLANNED', 'ACTIVE')).toBe(true);
+  it('allows FUTURE -> ACTIVE -> COMPLETED', () => {
+    expect(canTransition('FUTURE', 'ACTIVE')).toBe(true);
     expect(canTransition('ACTIVE', 'COMPLETED')).toBe(true);
   });
 
@@ -21,7 +21,7 @@ describe('sprint status transitions', () => {
     expect(canTransition('COMPLETED', 'ACTIVE')).toBe(false);
   });
 
-  it('rejects skipping straight to COMPLETED from PLANNED', () => {
-    expect(canTransition('PLANNED', 'COMPLETED')).toBe(false);
+  it('rejects skipping straight to COMPLETED from FUTURE', () => {
+    expect(canTransition('FUTURE', 'COMPLETED')).toBe(false);
   });
 });

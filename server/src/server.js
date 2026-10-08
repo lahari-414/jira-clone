@@ -1,9 +1,13 @@
 require('./config/env');
 const app = require('./app');
 const { port } = require('./config/env');
+const sprintService = require('./services/sprintService');
 
 const server = app.listen(port, () => {
   console.log(`API server listening on port ${port}`);
+  sprintService.processDueSprints().catch((error) => console.error('Sprint scheduler failed', error));
+  const sprintTimer = setInterval(() => sprintService.processDueSprints().catch((error) => console.error('Sprint scheduler failed', error)), 30_000);
+  sprintTimer.unref();
 });
 
 // Graceful shutdown

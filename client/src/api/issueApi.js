@@ -4,7 +4,10 @@ export const issueApi = {
   listByProject: (projectId, params) =>
     axiosClient.get(`/projects/${projectId}/issues`, { params }).then((r) => r.data.data.issues),
   board: (projectId) => axiosClient.get(`/projects/${projectId}/board`).then((r) => r.data.data.issues),
+  sprintBoard: (projectId, sprintId) => axiosClient.get(`/projects/${projectId}/sprint-board/${sprintId}`).then((r) => r.data.data.issues),
   backlog: (projectId) => axiosClient.get(`/projects/${projectId}/backlog`).then((r) => r.data.data.issues),
+  labels: (projectId) => axiosClient.get(`/projects/${projectId}/labels`).then((r) => r.data.data.labels),
+  attachLabel: (issueId, labelId) => axiosClient.post(`/issues/${issueId}/labels`, { labelId }),
   create: (projectId, data) =>
     axiosClient.post(`/projects/${projectId}/issues`, data).then((r) => r.data.data.issue),
   get: (id) => axiosClient.get(`/issues/${id}`).then((r) => r.data.data.issue),

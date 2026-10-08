@@ -34,6 +34,11 @@ const issueRepository = {
       include: issueInclude,
       orderBy: { createdAt: 'desc' },
     }),
+  findSprintHistory: (projectId, sprintId) => prisma.issue.findMany({
+    where: { projectId, sprintLinks: { some: { sprintId } } },
+    include: issueInclude,
+    orderBy: { createdAt: 'asc' },
+  }),
   findBoardIssues: (projectId) =>
     prisma.issue.findMany({
       where: { projectId, status: { not: 'BACKLOG' } },
@@ -43,7 +48,7 @@ const issueRepository = {
   findBacklogIssues: (projectId) =>
     prisma.issue.findMany({
       // Backlog is a view of unstarted work, never a separate copy of an issue.
-      where: { projectId, status: 'TODO' },
+      where: { projectId, sprintId: null, status: { not: 'DONE' } },
       include: issueInclude,
       orderBy: { createdAt: 'desc' },
     }),

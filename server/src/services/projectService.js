@@ -33,18 +33,18 @@ const projectService = {
     return projectRepository.update(id, allowed);
   },
 
-  async archive(id) {
+  async complete(id) {
     const project = await this.getById(id);
-    const archived = await projectRepository.archive(id);
+    const completed = await projectRepository.update(id, { status: 'COMPLETED' });
     const admins = await userRepository.findMany({ where: { role: { in: ['ADMIN', 'HR'] }, isActive: true }, select: { id: true } });
     const recipients = new Set([project.ownerId, ...project.members.map((member) => member.userId), ...admins.map((admin) => admin.id)]);
     await Promise.all([...recipients].map((userId) => notificationService.notify({
       userId,
       type: 'PROJECT_COMPLETED',
       title: 'Project completed',
-      message: `${project.name} (${project.key}) has been marked complete and archived.`,
+      message: `${project.name} (${project.key}) has been marked complete.`,
     })));
-    return archived;
+    return completed;
   },
 
   async delete(id) {

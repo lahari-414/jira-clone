@@ -18,5 +18,10 @@ module.exports = {
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
   smtpUrl: process.env.SMTP_URL,
-  mailFrom: process.env.MAIL_FROM || 'AmiVel PMS <no-reply@amivel.local>',
+  smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
+  smtpPort: Number(process.env.SMTP_PORT) || 587,
+  smtpSecure: process.env.SMTP_SECURE === 'true',
+  smtpUser: process.env.SMTP_USER || process.env.EMAIL_USER,
+  smtpPassword: process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS,
+  mailFrom: process.env.MAIL_FROM || process.env.SMTP_USER || process.env.EMAIL_USER || 'AmiVel PMS <no-reply@amivel.local>',
 };

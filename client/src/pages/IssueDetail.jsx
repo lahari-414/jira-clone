@@ -115,8 +115,8 @@ export default function IssueDetail() {
           <Link to={`/projects/${issue.projectId}`}>{issue.project.name}</Link> / {issue.key}
         </div>
         <div className="flex-row" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-          <h1 style={{ fontSize: 20, margin: 0 }}>{issue.title}</h1>
-          {!editing && <Button size="sm" variant="secondary" onClick={() => { setDraft({ title: issue.title, description: issue.description || '', issueType: issue.issueType, priority: issue.priority, dueDate: issue.dueDate?.slice(0, 10) || '', sprintIds: issue.sprints?.map((s) => s.id) || [] }); setEditing(true); }}>Edit issue</Button>}
+          <div><h1 style={{ fontSize: 20, margin: 0 }}>{issue.title}</h1>{issue.labels?.length > 0 && <div className="flex-row" style={{ marginTop: 7 }}>{issue.labels.map(({ label }) => <Badge key={label.id} variant="grey">{label.name}</Badge>)}</div>}</div>
+          {!editing && <Button size="sm" variant="secondary" onClick={() => { const currentSprint = issue.sprint; const isAssignable = currentSprint && !['COMPLETED', 'CANCELLED'].includes(currentSprint.status) && (!currentSprint.endDate || new Date(currentSprint.endDate).getTime() > Date.now()); setDraft({ title: issue.title, description: issue.description || '', issueType: issue.issueType, priority: issue.priority, dueDate: issue.dueDate?.slice(0, 10) || '', sprintIds: isAssignable ? [currentSprint.id] : [] }); setEditing(true); }}>Edit issue</Button>}
         </div>
 
         <div className="card card-pad" style={{ marginBottom: 16 }}>
@@ -124,7 +124,7 @@ export default function IssueDetail() {
             <div className="field"><label>Issue title</label><input className="input" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></div>
             <div className="field"><label>Description</label><Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} /></div>
             <div className="grid-2"><div className="field"><label>Priority</label><Select value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value })}>{['LOW', 'MEDIUM', 'HIGH', 'CRITICAL', 'HIGHEST'].map((value) => <option key={value}>{value}</option>)}</Select></div><div className="field"><label>Due date</label><input className="input" type="date" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} /></div></div>
-            <div className="field"><label>Sprints</label><select className="select" multiple value={draft.sprintIds} onChange={(e) => setDraft({ ...draft, sprintIds: [...e.target.selectedOptions].map((o) => o.value) })} style={{ minHeight: 90 }}>{sprints?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+            <div className="field"><label>Sprint</label><select className="select" value={draft.sprintIds?.[0] || ''} onChange={(e) => setDraft({ ...draft, sprintIds: e.target.value ? [e.target.value] : [] })}><option value="">Backlog</option>{sprints?.filter((s) => ['FUTURE', 'ACTIVE'].includes(s.status) && (!s.endDate || new Date(s.endDate).getTime() > Date.now())).map((s) => <option key={s.id} value={s.id}>{s.name} ({s.status === 'FUTURE' ? 'PLANNED' : s.status})</option>)}</select><div className="helper-text">Choose Backlog or any upcoming sprint.</div></div>
             <div className="flex-row" style={{ justifyContent: 'flex-end' }}><Button size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancel</Button><Button size="sm" onClick={saveIssue}>Save changes</Button></div>
           </> : <><h3 style={{ fontSize: 13, marginBottom: 8 }}>Description</h3><p style={{ margin: 0, fontSize: 13.5, whiteSpace: 'pre-wrap', color: 'var(--ink-700)' }}>{issue.description || 'No description provided.'}</p></>}
         </div>

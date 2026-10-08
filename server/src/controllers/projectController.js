@@ -22,8 +22,8 @@ exports.update = asyncHandler(async (req, res) => {
   success(res, { project });
 });
 
-exports.archive = asyncHandler(async (req, res) => {
-  const project = await projectService.archive(req.params.id);
+exports.complete = asyncHandler(async (req, res) => {
+  const project = await projectService.complete(req.params.id);
   success(res, { project });
 });
 

@@ -46,4 +46,5 @@ export const TYPE_BADGE = {
   STORY: 'badge-green',
   EPIC: 'badge-violet',
   IMPROVEMENT: 'badge-amber',
+  INCIDENT: 'badge-red',
 };

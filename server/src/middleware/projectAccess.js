@@ -56,6 +56,17 @@ const requireIssueAssigneeOrManager = (req, res, next) => {
   return next(ApiError.forbidden('Only the assigned developer or a project manager can change this issue status'));
 };
 
+const resolveSprintMembership = async (req, res, next) => {
+  try {
+    const sprint = await prisma.sprint.findUnique({ where: { id: req.params.id }, select: { id: true, projectId: true } });
+    if (!sprint) return next(ApiError.notFound('Sprint not found'));
+    req.params.projectId = sprint.projectId;
+    return requireProjectMember(req, res, next);
+  } catch (err) { return next(err); }
+};
+const requireSprintMember = resolveSprintMembership;
+const requireSprintManager = (req, res, next) => resolveSprintMembership(req, res, (err) => err ? next(err) : requireProjectManager(req, res, next));
+
 const requireCommentMember = async (req, res, next) => {
   try {
     const comment = await prisma.comment.findUnique({ where: { id: req.params.id }, include: { issue: { select: { projectId: true } } } });
@@ -65,4 +76,4 @@ const requireCommentMember = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { requireProjectMember, requireProjectManager, requireIssueMember, requireIssueManager, requireIssueAssigneeOrManager, requireCommentMember };
+module.exports = { requireProjectMember, requireProjectManager, requireIssueMember, requireIssueManager, requireIssueAssigneeOrManager, requireCommentMember, requireSprintMember, requireSprintManager };

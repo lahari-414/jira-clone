@@ -7,6 +7,11 @@ exports.list = asyncHandler(async (req, res) => {
   success(res, { sprints });
 });
 
+exports.backlog = asyncHandler(async (req, res) => {
+  const data = await sprintService.backlog(req.params.projectId);
+  success(res, data);
+});
+
 exports.create = asyncHandler(async (req, res) => {
   const sprint = await sprintService.create(req.params.projectId, req.body);
   success(res, { sprint }, 201);

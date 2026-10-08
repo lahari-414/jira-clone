@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
 import { projectApi } from '../api/projectApi';
@@ -11,10 +11,14 @@ import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
 import Textarea from '../components/common/Textarea';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
+import { userApi } from '../api/userApi';
+import Select from '../components/common/Select';
 
 export default function Projects() {
   const { data: projects, loading, error, reload } = useApi(projectApi.list, []);
   const [showCreate, setShowCreate] = useState(false);
+  const { data: workspaceUsers } = useApi(() => userApi.list({ limit: 100 }), []);
 
   return (
     <div>
@@ -40,14 +44,15 @@ export default function Projects() {
         <div className="card">
           <table className="data-table">
             <thead>
-              <tr><th>Project</th><th>Key</th><th>Status</th><th>Created</th></tr>
+              <tr><th>Project</th><th>Key</th><th>Status</th><th>Members</th><th>Created</th></tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr key={p.id}>
                   <td><Link to={`/projects/${p.id}`} style={{ fontWeight: 600 }}>{p.name}</Link></td>
                   <td><Badge variant="blue">{p.key}</Badge></td>
-                  <td><Badge variant={p.status === 'ACTIVE' ? 'green' : 'grey'}>{p.status}</Badge></td>
+                  <td><Badge variant={p.status === 'ACTIVE' ? 'green' : p.status === 'COMPLETED' || p.status === 'ARCHIVED' ? 'blue' : 'grey'}>{p.status === 'COMPLETED' || p.status === 'ARCHIVED' ? 'Completed' : p.status}</Badge></td>
+                  <td><ProjectMembers project={p} workspaceUsers={workspaceUsers?.users || []} /></td>
                   <td className="text-muted">{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
@@ -59,6 +64,21 @@ export default function Projects() {
       {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} onCreated={reload} />}
     </div>
   );
+}
+
+function ProjectMembers({ project, workspaceUsers }) {
+  const { data: members, reload } = useApi(() => projectApi.members(project.id), [project.id]);
+  const { user } = useAuth();
+  const toast = useToast();
+  const [newMember, setNewMember] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+  const dropdownRef = useRef(null);
+  const canManage = ['ADMIN', 'HR'].includes(user?.role) || members?.some((m) => m.userId === user?.id && ['OWNER', 'MANAGER'].includes(m.projectRole));
+  const perform = async (action) => { try { await action(); reload(); toast.success('Project members updated'); } catch (error) { toast.error(error.response?.data?.message || 'Could not update project members'); } };
+  useEffect(() => { const close = (event) => { if (!dropdownRef.current?.contains(event.target)) setIsOpen(false); }; document.addEventListener('mousedown', close); return () => document.removeEventListener('mousedown', close); }, []);
+  const toggle = (event) => { const rect = event.currentTarget.getBoundingClientRect(); setPopoverPosition({ top: Math.min(rect.bottom + 8, window.innerHeight - 280), left: Math.min(rect.left, window.innerWidth - 250) }); setIsOpen((open) => !open); };
+  return <div className="project-members-dropdown" ref={dropdownRef}><button className="project-members-trigger" type="button" aria-expanded={isOpen} onClick={toggle}>{members?.length || 0} members <span>⌄</span></button>{isOpen && <div className="project-members-popover" style={{ top: popoverPosition.top, left: popoverPosition.left }}>{members?.length ? members.map((member) => <div key={member.id}><strong>{member.user.name}</strong>{canManage && member.userId !== project.ownerId ? <Select aria-label={`${member.user.name} project role`} value={member.projectRole} onChange={(e) => perform(() => projectApi.updateMember(project.id, member.userId, e.target.value))}><option value="MANAGER">Manager</option><option value="MEMBER">Member</option><option value="VIEWER">Viewer</option></Select> : <small>{member.projectRole.toLowerCase()}</small>}{canManage && member.userId !== project.ownerId && <button className="project-member-remove" onClick={() => perform(() => projectApi.removeMember(project.id, member.userId))}>Remove</button>}</div>) : <span className="text-muted">No team members</span>}{canManage && <div className="project-member-add"><Select aria-label="Select workspace user" value={newMember} onChange={(e) => setNewMember(e.target.value)}><option value="">Add a teammate…</option>{workspaceUsers.filter((workspaceUser) => workspaceUser.isActive && !members?.some((m) => m.userId === workspaceUser.id)).map((workspaceUser) => <option key={workspaceUser.id} value={workspaceUser.id}>{workspaceUser.name}</option>)}</Select><button disabled={!newMember} onClick={() => perform(async () => { await projectApi.addMember(project.id, { userId: newMember }); setNewMember(''); })}>Add</button></div>}</div>}</div>;
 }
 
 function CreateProjectModal({ onClose, onCreated }) {

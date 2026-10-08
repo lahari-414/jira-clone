@@ -11,3 +11,8 @@ exports.getBacklog = asyncHandler(async (req, res) => {
   const issues = await issueService.getBacklog(req.params.projectId);
   success(res, { issues });
 });
+
+exports.getSprintBoard = asyncHandler(async (req, res) => {
+  const issues = await issueService.getSprintBoard(req.params.sprintId, req.params.projectId);
+  success(res, { issues });
+});

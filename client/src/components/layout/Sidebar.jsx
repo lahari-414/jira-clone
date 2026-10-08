@@ -7,6 +7,7 @@ const navItems = [
   { to: '/projects', label: 'Projects', icon: '▤' },
   { to: '/search', label: 'Issues', icon: '◫' },
   { to: '/my-issues', label: 'My issues', icon: '✓' },
+  { to: '/communicating', label: 'Communicating', icon: '↗' },
 ];
 
 export default function Sidebar({ mobileOpen = false, onNavigate = () => {} }) {

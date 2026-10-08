@@ -7,6 +7,7 @@ import EmptyState from '../components/common/EmptyState';
 import Badge from '../components/common/Badge';
 import Avatar from '../components/common/Avatar';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { STATUS_LABELS, STATUS_BADGE, TYPE_BADGE, PRIORITY_COLORS, timeAgo } from '../utils/format';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
@@ -165,6 +166,7 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+      {createPortal(<Link className="dashboard-idea-shortcut" to="/communicating?new=1" aria-label="Open the idea form" title="Share an idea"><img src="/idea-symbol.png" alt="Open ideas form" /></Link>, document.body)}
     </div>
   );
 }

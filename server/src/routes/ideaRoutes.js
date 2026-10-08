@@ -1,0 +1,10 @@
+const router = require('express').Router();
+const { authenticate } = require('../middleware/auth');
+const controller = require('../controllers/ideaController');
+const { body } = require('express-validator');
+const validate = require('../middleware/validate');
+router.use(authenticate);
+router.get('/', controller.list);
+router.post('/', [body('title').trim().notEmpty().isLength({ max: 160 }), body('content').trim().notEmpty().isLength({ max: 5000 })], validate, controller.create);
+router.post('/:id/comments', [body('content').trim().notEmpty().isLength({ max: 2000 })], validate, controller.comment);
+module.exports = router;
